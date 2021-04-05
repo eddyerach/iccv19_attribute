@@ -16,12 +16,13 @@ Contact: chufeng.t@foxmail.com or tcf18@mails.tsinghua.edu.cn
 - RAP: http://rap.idealtest.org/
 - PETA: http://mmlab.ie.cuhk.edu.hk/projects/PETA.html
 - PA-100K: https://github.com/xh-liu/HydraPlus-Net
+- Gender Dataset: raw_data
 
 The original datasets should be processed to match the DataLoader.
 
 We provide the label lists for training and testing.
 
-## Training and Testing
+## Training and Testing (Original)
 
 ```
 python main.py --approach=inception_iccv --experiment=rap
@@ -30,6 +31,12 @@ python main.py --approach=inception_iccv --experiment=rap
 ```
 python main.py --approach=inception_iccv --experiment=rap -e --resume='model_path'
 ```
+
+## Testing 
+- Generate annotations file for data with /utils/generate_Annotations.py
+- Update newdatasets.py with the annotation file path
+- Upload the model on model/ and rename it as bn_inception-52deb4733.pth
+- Run python for_test.py
 
 ## Pretrained Models
 

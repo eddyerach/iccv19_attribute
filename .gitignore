@@ -1,0 +1,5 @@
+.ipynb_checkpoints
+raw_data
+.vscode
+utils/__pycache__
+model/__pycache__
