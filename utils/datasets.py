@@ -166,7 +166,7 @@ description['rap'] = ['Female',
 
 
 
-def Get_Dataset(experiment, approach):
+def Get_Dataset(experiment, approach, data_path, train_list_path, val_list_path):
 
     #TODO Check what happen if we change the value for the Normalization
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -185,20 +185,20 @@ def Get_Dataset(experiment, approach):
         ])
 
     if experiment == 'pa100k':
-        train_dataset = MultiLabelDataset(root='data_path',
-                    label='train_list_path', transform=transform_train)
-        val_dataset = MultiLabelDataset(root='data_path',
-                    label='val_list_path', transform=transform_test)
+        train_dataset = MultiLabelDataset(root=data_path,
+                    label=train_list_path, transform=transform_train)
+        val_dataset = MultiLabelDataset(root=data_path,
+                    label=val_list_path, transform=transform_test)
         return train_dataset, val_dataset, attr_nums['pa100k'], description['pa100k']
     elif experiment == 'rap':
-        train_dataset = MultiLabelDataset(root='data_path',
-                    label='train_list_path', transform=transform_train)
-        val_dataset = MultiLabelDataset(root='data_path',
-                    label='val_list_path', transform=transform_test)
+        train_dataset = MultiLabelDataset(root=data_path,
+                    label=train_list_path, transform=transform_train)
+        val_dataset = MultiLabelDataset(root=data_path,
+                    label=val_list_path, transform=transform_test)
         return train_dataset, val_dataset, attr_nums['rap'], description['rap']
     elif experiment == 'peta':
-        train_dataset = MultiLabelDataset(root='data_path',
-                    label='train_list_path', transform=transform_train)
-        val_dataset = MultiLabelDataset(root='data_path',
-                    label='val_list_path', transform=transform_test)
+        train_dataset = MultiLabelDataset(root=data_path,
+                    label=train_list_path, transform=transform_train)
+        val_dataset = MultiLabelDataset(root=data_path,
+                    label=val_list_path, transform=transform_test)
         return train_dataset, val_dataset, attr_nums['peta'], description['peta']

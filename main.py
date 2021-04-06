@@ -27,8 +27,12 @@ parser.add_argument('--start-epoch', default=0, type=int, required=False, help='
 parser.add_argument('--print_freq', default=100, type=int, required=False, help='(default=%(default)d)')
 parser.add_argument('--save_freq', default=10, type=int, required=False, help='(default=%(default)d)')
 parser.add_argument('--resume', default='', type=str, required=False, help='(default=%(default)s)')
+parser.add_argument('--model_path', default='', type=str, required=False, help='Path to backbone model')
 parser.add_argument('--decay_epoch', default=(20,40), type=eval, required=False, help='(default=%(default)d)')
 parser.add_argument('--prefix', default='', type=str, required=False, help='(default=%(default)s)')
+parser.add_argument('--data_path', type=str, required=False, help='path to the dataset root')
+parser.add_argument('--train_list_path', type=str, required=False, help='path to the train annotations')
+parser.add_argument('--val_list_path', type=str, required=False, help='path to the train annotations')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true', required=False, help='evaluate model on validation set')
 
 # Seed
@@ -53,7 +57,7 @@ def main():
     print('=' * 100)
 
     # Data loading code
-    train_dataset, val_dataset, attr_num, description = Get_Dataset(args.experiment, args.approach)
+    train_dataset, val_dataset, attr_num, description = Get_Dataset(args.experiment, args.approach, args.data_path, args.train_list_path, args.val_list_path)
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
@@ -64,7 +68,7 @@ def main():
         batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
 
     # create model
-    model = models.__dict__[args.approach](pretrained=True, num_classes=attr_num)
+    model = models.__dict__[args.approach](args.model_path, pretrained=True, num_classes=attr_num)
 
     # get the number of model parameters
     print('Number of model parameters: {}'.format(

@@ -5,14 +5,14 @@ from torch.nn import functional as F
 
 __all__ = ['inception_iccv']
 
-def inception_iccv(pretrained=True, debug=False, **kwargs):
+def inception_iccv(model_path, pretrained=True, debug=False, **kwargs):
     model = InceptionNet(**kwargs)
     """
         Pretrained model: 'https://github.com/Cadene/pretrained-models.pytorch/blob/master/pretrainedmodels/models/bninception.py'
         Initializing with basedline models (trained BN-Inception) can obtain better results.
     """
     if pretrained:
-        pretrained_dict = torch.load('model/bn_inception-52deb4733.pth')
+        pretrained_dict = torch.load(model_path)
         model_dict = model.state_dict()
         new_dict = {}
         for k,_ in model_dict.items():
