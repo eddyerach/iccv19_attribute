@@ -3,3 +3,5 @@ raw_data
 .vscode
 utils/__pycache__
 model/__pycache__
+model/bn_inception-52deb4733.pth
+stuff

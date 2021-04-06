@@ -32,7 +32,7 @@ python main.py --approach=inception_iccv --experiment=rap
 python main.py --approach=inception_iccv --experiment=rap -e --resume='model_path'
 ```
 
-## Testing 
+## Update (Testing) 
 - Generate annotations file for data with /utils/generate_Annotations.py
 - Update newdatasets.py with the annotation file path
 - Upload the model on model/ and rename it as bn_inception-52deb4733.pth

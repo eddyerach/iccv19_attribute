@@ -58,7 +58,7 @@ def main():
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=args.batch_size, shuffle=True, num_workers=4, pin_memory=True)
-
+    # num workers: How many subprocesses to use
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
         batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
@@ -88,6 +88,7 @@ def main():
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
 
+    #TODO check if we can use the best algorithms for our hadware because the input size is fixed. benchmark = True
     cudnn.benchmark = False
     cudnn.deterministic = True
 
@@ -153,6 +154,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 out = output[k]
                 loss_list.append(criterion.forward(torch.sigmoid(out), target, epoch))
             loss = sum(loss_list)
+            #TODO What is maximum voting?
             # maximum voting
             output = torch.max(torch.max(torch.max(output[0],output[1]),output[2]),output[3])
         else:
@@ -382,6 +384,7 @@ def accuracy(output, target):
 class Weighted_BCELoss(object):
     """
         Weighted_BCELoss was proposed in "Multi-attribute learning for pedestrian attribute recognition in surveillance scenarios"[13].
+        weight of l-th parameter = exp(-p_l / sigma^2) where p_l is the positive ratio l-th attributre in the training set
     """
     def __init__(self, experiment):
         super(Weighted_BCELoss, self).__init__()

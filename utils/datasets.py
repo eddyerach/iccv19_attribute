@@ -10,6 +10,10 @@ import torchvision.datasets as datasets
 def default_loader(path):
     return Image.open(path).convert('RGB')
 class MultiLabelDataset(data.Dataset):
+    '''
+    Load a multi label data.
+    input: dataset of images and its labels
+    '''
     def __init__(self, root, label, transform = None, loader = default_loader):
         images = []
         labels = open(label).readlines()
@@ -164,6 +168,7 @@ description['rap'] = ['Female',
 
 def Get_Dataset(experiment, approach):
 
+    #TODO Check what happen if we change the value for the Normalization
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     transform_train = transforms.Compose([
         transforms.Resize(size=(256, 128)),
