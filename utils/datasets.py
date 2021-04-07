@@ -6,6 +6,9 @@ import numpy as np
 import torch.utils.data as data
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
+import logging
+# Level of warnings
+#logging.basicConfig(format='[%(levelname)s]: %(message)s', level=logging.INFO) 
 
 def default_loader(path):
     return Image.open(path).convert('RGB')
@@ -16,10 +19,12 @@ class MultiLabelDataset(data.Dataset):
     '''
     def __init__(self, root, label, transform = None, loader = default_loader):
         images = []
+    
         labels = open(label).readlines()
         for line in labels:
             items = line.split()
             img_name = items.pop(0)
+            logging.info('img_name on MultiLabelDataset init: {}'.format(img_name)) 
             if os.path.isfile(os.path.join(root, img_name)):
                 cur_label = tuple([int(v) for v in items])
                 images.append((img_name, cur_label))
@@ -29,6 +34,7 @@ class MultiLabelDataset(data.Dataset):
         self.images = images
         self.transform = transform
         self.loader = loader
+        
 
     def __getitem__(self, index):
         img_name, label = self.images[index]
@@ -163,10 +169,52 @@ description['rap'] = ['Female',
                         'CarryingbyArm',
                         'CarryingbyHand']
 
+class MultiLabelDatasetOnlyForTest(MultiLabelDataset):
+    '''
+    Load a multi label data.
+    input: dataset of images and its labels
+    '''
+    def __init__(self, root, label, transform = None, loader = default_loader, images_path = None):
+        images = []
+        images_path = []
+        labels = open(label).readlines()
+
+        for line in labels:
+            items = line.split()
+            img_name = items.pop(0)
+            if os.path.isfile(os.path.join(root, img_name)):
+                cur_label = tuple([int(v) for v in items])
+                images.append((img_name, cur_label))
+                images_path.append((os.path.join(root, img_name)))
+            else:
+                print(os.path.join(root, img_name) + 'Not Found.')
+        self.root = root
+        self.images = images
+        self.transform = transform
+        self.loader = loader
+        self.images_path = images_path
+        
+
+    def __getitem__(self, index):
+        img_name, label = self.images[index]
+        #img_path = self.images_path[index]
+        img = self.loader(os.path.join(self.root, img_name))
+        raw_img = img.copy()
+        if self.transform is not None:
+            img = self.transform(img)
+        return img, torch.Tensor(label)
+
+    def __len__(self):
+        return len(self.images)
+    
+    def get_Images_Path(self):
+        return self.images_path
+
+    
 
 
 
-def Get_Dataset(experiment, approach, data_path, train_list_path, val_list_path):
+def Get_Dataset(experiment, approach, data_path, train_list_path, val_list_path,generate_file):
 
     #TODO Check what happen if we change the value for the Normalization
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -202,3 +250,20 @@ def Get_Dataset(experiment, approach, data_path, train_list_path, val_list_path)
         val_dataset = MultiLabelDataset(root=data_path,
                     label=val_list_path, transform=transform_test)
         return train_dataset, val_dataset, attr_nums['peta'], description['peta']
+    elif experiment == 'gender':
+        if generate_file:
+            val_dataset = MultiLabelDatasetOnlyForTest(root=data_path,
+                        label=val_list_path, transform=transform_test)
+            train_dataset = MultiLabelDatasetOnlyForTest(root=data_path,
+                        label=train_list_path, transform=transform_train)
+            data = MultiLabelDatasetOnlyForTest(root=data_path,
+                        label=val_list_path, transform=transform_train)
+            images_path = data.get_Images_Path()
+            return train_dataset, val_dataset, attr_nums['peta'], description['peta'],images_path
+
+        else:
+            train_dataset = MultiLabelDataset(root=data_path,
+                        label=train_list_path, transform=transform_train)
+            val_dataset = MultiLabelDataset(root=data_path,
+                        label=val_list_path, transform=transform_test)
+            return train_dataset, val_dataset, attr_nums['peta'], description['peta']

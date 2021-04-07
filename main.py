@@ -4,6 +4,10 @@ import shutil
 import time
 import sys
 import numpy as np
+import logging
+import pandas as pd
+from numpy.random import randint
+from attributes import df_attributes
 
 import torch
 import torch.nn as nn
@@ -34,6 +38,10 @@ parser.add_argument('--data_path', type=str, required=False, help='path to the d
 parser.add_argument('--train_list_path', type=str, required=False, help='path to the train annotations')
 parser.add_argument('--val_list_path', type=str, required=False, help='path to the train annotations')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true', required=False, help='evaluate model on validation set')
+parser.add_argument('--generate_file', default=False, type=bool,required=False, help='Generate a file with inferences for each image')
+
+# Level of warnings
+logging.basicConfig(format='[%(levelname)s]: %(message)s', level=logging.INFO) 
 
 # Seed
 np.random.seed(1)
@@ -57,11 +65,11 @@ def main():
     print('=' * 100)
 
     # Data loading code
-    train_dataset, val_dataset, attr_num, description = Get_Dataset(args.experiment, args.approach, args.data_path, args.train_list_path, args.val_list_path)
-
+    train_dataset, val_dataset, attr_num, description, image_path = Get_Dataset(args.experiment, args.approach, args.data_path, args.train_list_path, args.val_list_path, args.generate_file)
+    logging.info('train_dataset at main: {}'.format((train_dataset))) 
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
-        batch_size=args.batch_size, shuffle=True, num_workers=4, pin_memory=True)
+        batch_size=args.batch_size, shuffle=False, num_workers=4, pin_memory=True)
     # num workers: How many subprocesses to use
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
@@ -107,11 +115,16 @@ def main():
         optimizer = torch.optim.SGD(model.parameters(), args.lr,
                                     momentum=args.momentum,
                                     weight_decay=args.weight_decay)
-
+    
 
     if args.evaluate:
-        test(val_loader, model, attr_num, description)
-        return
+        
+        if args.generate_file:
+            test_and_generate_attributes_file(val_loader, model, attr_num, description,image_path)
+            return
+        else:
+            test(val_loader, model, attr_num, description)
+            return 
 
     for epoch in range(args.start_epoch, args.epochs):
         adjust_learning_rate(optimizer, epoch, args.decay_epoch)
@@ -237,6 +250,7 @@ def validate(val_loader, model, criterion, epoch):
 
 
 def test(val_loader, model, attr_num, description):
+
     model.eval()
 
     pos_cnt = []
@@ -325,6 +339,65 @@ def test(val_loader, model, attr_num, description):
         print('\t' + 'F1_Score:  '+str(f1))
     print('=' * 100)
 
+def test_and_generate_attributes_file(val_loader, model, attr_num, description,image_path):
+    '''
+    Input: 
+    val_loader: loader of validation data in batches
+    Model: model to test
+    attr_num: Number of attributes of each image
+    descrition: 
+    Output:
+    csv file with name + attribute inferences
+    '''
+  
+    #list_annotations = []
+    #annotations = []
+    model.eval()
+    num_incorrect_pred = 0
+    num_correct_pred = 0
+    
+    #Get dataframe from attributes.py
+    
+    #logging.info('Labels: {}'.format(description)) 
+
+
+
+    #df_name_attributes = pd.DataFrame( columns = headers)
+    
+   
+    
+    
+    for i, _ in enumerate(val_loader):
+        input, target = _
+        target = target.cuda(non_blocking=True)
+        input = input.cuda(non_blocking=True)
+        output = model(input)
+        bs = target.size(0)
+
+        # maximum voting
+        if type(output) == type(()) or type(output) == type([]):
+            output = torch.max(torch.max(torch.max(output[0],output  [1]),output[2]),output[3])
+
+
+        batch_size = target.size(0)
+        #tol = tol + batch_size
+        output = torch.sigmoid(output.data).cpu().numpy()
+        output = np.where(output > 0.5, 1, 0)
+        target = target.cpu().numpy()
+        #logging.info('Lote Index: {}'.format(i)) 
+        
+        ##Generate the list Annotations for all images: [attributes]
+
+
+        for jt in range(batch_size):
+            row = [image_path[jt]] + list(map(str,output[jt][:]))
+
+            df_attributes.loc[jt] = row
+        
+        df_attributes.to_csv('out.csv',index=False)
+            
+                
+            
 
 def save_checkpoint(state, epoch, prefix, filename='.pth.tar'):
     """Saves checkpoint to disk"""
