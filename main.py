@@ -437,7 +437,7 @@ def test_and_generate_attributes_file(val_loader, model, attr_num, description,i
             if output[jt][gender_attribute] == target[jt][gender_attribute]:
                 num_correct_pred+=1
     
-    df_attributes.to_csv('out.csv',index=False)
+    df_attributes.to_csv('Inference_result.csv',index=False)
             
     return num_correct_pred        
             
