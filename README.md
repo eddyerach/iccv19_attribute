@@ -32,8 +32,13 @@ sh run_train.sh
 sh run_test.sh
 ```
 ## Update: Train
-Perform a retrain using:
-- Model located in CHECKPOINT_PATH and the train and validation data with root path DATA_PATH located in TRAIN_ANNOTATIONS VAL_ANNOTATIONS respectively.
+Perform a retrain with:
+- Model located in CHECKPOINT_PATH
+- Images root data path as DATA_PATH
+- train and validation annotations located in TRAIN_ANNOTATIONS and VAL_ANNOTATIONS respectively
+- 80 epochs
+- save frequency equals 10
+
 ## Update: Test
 - Generate annotations file for data with /utils/generate_Annotations.py
 - Update newdatasets.py with the annotation file path
