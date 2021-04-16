@@ -32,8 +32,8 @@ sh run_train.sh
 sh run_test.sh
 ```
 ## Update: Train
--  Perform a retrain using:
-  -  Model located in CHECKPOINT_PATH and the train and validation data with root path DATA_PATH located in TRAIN_ANNOTATIONS VAL_ANNOTATIONS respectively.
+Perform a retrain using:
+- Model located in CHECKPOINT_PATH and the train and validation data with root path DATA_PATH located in TRAIN_ANNOTATIONS VAL_ANNOTATIONS respectively.
 ## Update: Test
 - Generate annotations file for data with /utils/generate_Annotations.py
 - Update newdatasets.py with the annotation file path
