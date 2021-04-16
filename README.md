@@ -40,7 +40,7 @@ Perform a retrain with:
 - save frequency equals 10
 
 ## Update: Test
-Perform a inference with:
+Perform an inference with:
 - Model located in CHECKPOINT_PATH
 - Images root data path as DATA_PATH
 - Validation annotations located in VAL_ANNOTATIONS<br />
