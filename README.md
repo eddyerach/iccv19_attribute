@@ -43,7 +43,7 @@ Perform a retrain with:
 Perform a inference with:
 - Model located in CHECKPOINT_PATH
 - Images root data path as DATA_PATH
-- Validation annotations located in VAL_ANNOTATIONS
+- Validation annotations located in VAL_ANNOTATIONS<br />
 Output:
 - Inference_result.csv: Inference annotations for all images in VAL_ANNOTATIONS
 
