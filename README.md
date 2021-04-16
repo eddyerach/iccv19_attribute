@@ -22,17 +22,19 @@ The original datasets should be processed to match the DataLoader.
 
 We provide the label lists for training and testing.
 
-## Training and Testing (Original)
+## Training and Testing 
 
 ```
-python main.py --approach=inception_iccv --experiment=rap
+sh run_train.sh
 ```
 
 ```
-python main.py --approach=inception_iccv --experiment=rap -e --resume='model_path'
+sh run_test.sh
 ```
-
-## Update (Testing) 
+## Update: Train
+-  Perform a retrain using:
+..*  Model located in CHECKPOINT_PATH and the train and validation data with root path DATA_PATH located in TRAIN_ANNOTATIONS VAL_ANNOTATIONS respectively.
+## Update: Test
 - Generate annotations file for data with /utils/generate_Annotations.py
 - Update newdatasets.py with the annotation file path
 - Upload the model on model/ and rename it as bn_inception-52deb4733.pth
