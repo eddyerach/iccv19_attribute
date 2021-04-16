@@ -8,20 +8,28 @@ import logging
 import pandas as pd
 from numpy.random import randint
 from attributes import df_attributes
+import csv
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.optim
 import model as models
+from torchinfo import summary
+
+from torch.utils.tensorboard import SummaryWriter
+
+# default `log_dir` is "runs" - we'll be more specific here
+writer = SummaryWriter('stuff/runs/gender_iccv_peta_dk')
 
 from utils.datasets import Get_Dataset
 
 parser = argparse.ArgumentParser(description='Pedestrian Attribute Framework')
 parser.add_argument('--experiment', default='rap', type=str, required=True, help='(default=%(default)s)')
 parser.add_argument('--approach', default='inception_iccv', type=str, required=True, help='(default=%(default)s)')
-parser.add_argument('--epochs', default=60, type=int, required=False, help='(default=%(default)d)')
+parser.add_argument('--epochs', default=45, type=int, required=False, help='(default=%(default)d)')
 parser.add_argument('--batch_size', default=32, type=int, required=False, help='(default=%(default)d)')
 parser.add_argument('--lr', '--learning-rate', default=0.0001, type=float, required=False, help='(default=%(default)f)')
 parser.add_argument('--optimizer', default='adam', type=str, required=False, help='(default=%(default)s)')
@@ -32,7 +40,7 @@ parser.add_argument('--print_freq', default=100, type=int, required=False, help=
 parser.add_argument('--save_freq', default=10, type=int, required=False, help='(default=%(default)d)')
 parser.add_argument('--resume', default='', type=str, required=False, help='(default=%(default)s)')
 parser.add_argument('--model_path', default='', type=str, required=False, help='Path to backbone model')
-parser.add_argument('--decay_epoch', default=(20,40), type=eval, required=False, help='(default=%(default)d)')
+parser.add_argument('--decay_epoch', default=(45,60), type=eval, required=False, help='(default=%(default)d)')
 parser.add_argument('--prefix', default='', type=str, required=False, help='(default=%(default)s)')
 parser.add_argument('--data_path', type=str, required=False, help='path to the dataset root')
 parser.add_argument('--train_list_path', type=str, required=False, help='path to the train annotations')
@@ -65,11 +73,16 @@ def main():
     print('=' * 100)
 
     # Data loading code
-    train_dataset, val_dataset, attr_num, description, image_path = Get_Dataset(args.experiment, args.approach, args.data_path, args.train_list_path, args.val_list_path, args.generate_file)
+
+    if args.generate_file:
+        train_dataset, val_dataset, attr_num, description , image_path= Get_Dataset(args.experiment, args.approach, args.data_path, args.train_list_path, args.val_list_path, args.generate_file)
+    else:
+        train_dataset, val_dataset, attr_num, description = Get_Dataset(args.experiment, args.approach, args.data_path, args.train_list_path, args.val_list_path, args.generate_file)
+
     logging.info('train_dataset at main: {}'.format((train_dataset))) 
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
-        batch_size=args.batch_size, shuffle=False, num_workers=4, pin_memory=True)
+        batch_size=args.batch_size, shuffle=True, num_workers=4, pin_memory=True)
     # num workers: How many subprocesses to use
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
@@ -92,6 +105,7 @@ def main():
         if os.path.isfile(args.resume):
             print("=> loading checkpoint '{}'".format(args.resume))
             checkpoint = torch.load(args.resume)
+            logging.debug('Values in checkpoint: {}'.format(checkpoint))
             args.start_epoch = checkpoint['epoch']
             best_accu = checkpoint['best_accu']
             model.load_state_dict(checkpoint['state_dict'])
@@ -99,7 +113,7 @@ def main():
                   .format(args.resume, checkpoint['epoch']))
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
-
+    #logging.info('Model Summary: : {}'.format((summary(model, input_size=(32, 3, 256, 128))))) 
     #TODO check if we can use the best algorithms for our hadware because the input size is fixed. benchmark = True
     cudnn.benchmark = False
     cudnn.deterministic = True
@@ -118,20 +132,27 @@ def main():
     
 
     if args.evaluate:
-        
         if args.generate_file:
-            test_and_generate_attributes_file(val_loader, model, attr_num, description,image_path)
+            num_correct_pred = test_and_generate_attributes_file(val_loader, model, attr_num, description,image_path)
+            logging.critical('Total Correct Inferences: {}'.format((num_correct_pred))) 
             return
         else:
             test(val_loader, model, attr_num, description)
             return 
 
+    file = open("training_data.csv","w")
+    file.truncate(0)
+    file.close()
+
+    file = open("val_data.csv","w")
+    file.truncate(0)
+    file.close()
     for epoch in range(args.start_epoch, args.epochs):
         adjust_learning_rate(optimizer, epoch, args.decay_epoch)
 
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch)
-
+        #train(train_loader, model, criterion, optimizer, epoch, running_loss)
+        train(train_loader, model, criterion, optimizer, epoch)    
         # evaluate on validation set
         accu = validate(val_loader, model, criterion, epoch)
 
@@ -150,100 +171,122 @@ def main():
 
 def train(train_loader, model, criterion, optimizer, epoch):
     """Train for one epoch on the training set"""
+    
+        
+
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
     model.train()
-
     end = time.time()
-    for i, _ in enumerate(train_loader):
-        input, target = _
-        target = target.cuda(non_blocking=True)
-        input = input.cuda(non_blocking=True)
-        output = model(input)
+    #employee_writer = csv.writer(employee_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    with open('training_data.csv', mode='a') as training_data_file:
+        fieldnames = ['epoch', 'Train_loss', 'Train_acc']    
+        training_data_writer = csv.DictWriter(training_data_file, fieldnames = fieldnames)
 
-        bs = target.size(0)
 
-        if type(output) == type(()) or type(output) == type([]):
-            loss_list = []
-            # deep supervision
-            for k in range(len(output)):
-                out = output[k]
-                loss_list.append(criterion.forward(torch.sigmoid(out), target, epoch))
-            loss = sum(loss_list)
-            #TODO What is maximum voting?
-            # maximum voting
-            output = torch.max(torch.max(torch.max(output[0],output[1]),output[2]),output[3])
-        else:
-            loss = criterion.forward(torch.sigmoid(output), target, epoch)
+        for i, _ in enumerate(train_loader):
+            input, target = _
+            target = target.cuda(non_blocking=True)
+            input = input.cuda(non_blocking=True)
+            output = model(input)
 
-        # measure accuracy and record loss
-        accu = accuracy(output.data, target)
-        losses.update(loss.data, bs)
-        top1.update(accu, bs)
+            bs = target.size(0)
 
-        # compute gradient and do SGD step
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+            if type(output) == type(()) or type(output) == type([]):
+                loss_list = []
+                # deep supervision
+                for k in range(len(output)):
+                    out = output[k]
+                    loss_list.append(criterion.forward(torch.sigmoid(out), target, epoch))
+                loss = sum(loss_list)
+                #TODO What is maximum voting?
+                # maximum voting
+                output = torch.max(torch.max(torch.max(output[0],output[1]),output[2]),output[3])
+            else:
+                loss = criterion.forward(torch.sigmoid(output), target, epoch)
 
-        # measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
 
-        if i % args.print_freq == 0:
-            print('Epoch: [{0}][{1}/{2}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'Accu {top1.val:.3f} ({top1.avg:.3f})'.format(
-                      epoch, i, len(train_loader), batch_time=batch_time,
-                      loss=losses, top1=top1))
+
+            # measure accuracy and record loss
+            accu = accuracy(output.data, target)
+            losses.update(loss.data, bs)
+            top1.update(accu, bs)
+
+            # compute gradient and do SGD step
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            # measure elapsed time
+            batch_time.update(time.time() - end)
+            end = time.time()
+
+            if i % args.print_freq == 0:               
+                #training_data_writer.writerow({'epoch' : epoch, 'Train_loss':losses.val,'Train_acc': top1.val})
+                training_data_writer.writerow({'epoch' : epoch, 'Train_loss':losses.val.cpu().numpy(),'Train_acc': top1.val})
+                print('Epoch: [{0}][{1}/{2}]\t'
+                    'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                    'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
+                    'Accu {top1.val:.3f} ({top1.avg:.3f})'.format(
+                        epoch, i, len(train_loader), batch_time=batch_time,
+                        loss=losses, top1=top1))
+    
 
 
 def validate(val_loader, model, criterion, epoch):
     """Perform validation on the validation set"""
+
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
     model.eval()
-
     end = time.time()
-    for i, _ in enumerate(val_loader):
-        input, target = _
-        target = target.cuda(non_blocking=True)
-        input = input.cuda(non_blocking=True)
-        output = model(input)
 
-        bs = target.size(0)
 
-        if type(output) == type(()) or type(output) == type([]):
-            loss_list = []
-            # deep supervision
-            for k in range(len(output)):
-                out = output[k]
-                loss_list.append(criterion.forward(torch.sigmoid(out), target, epoch))
-            loss = sum(loss_list)
-            # maximum voting
-            output = torch.max(torch.max(torch.max(output[0],output[1]),output[2]),output[3])
-        else:
-            loss = criterion.forward(torch.sigmoid(output), target, epoch)
+    with open('val_data.csv', mode='a') as validating_data_file:
+        fieldnames = ['epoch', 'Val_loss', 'Val_acc']
+        validating_data_writer = csv.DictWriter(validating_data_file, delimiter=',', fieldnames = fieldnames)
 
-        # measure accuracy and record loss
-        accu = accuracy(output.data, target)
-        losses.update(loss.data, bs)
-        top1.update(accu, bs)
 
-        # measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
 
-        if i % args.print_freq == 0:
-            print('Test: [{0}/{1}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'Accu {top1.val:.3f} ({top1.avg:.3f})'.format(
-                      i, len(val_loader), batch_time=batch_time, loss=losses,
-                      top1=top1))
+        for i, _ in enumerate(val_loader):
+            input, target = _
+            target = target.cuda(non_blocking=True)
+            input = input.cuda(non_blocking=True)
+            output = model(input)
+
+            bs = target.size(0)
+
+            if type(output) == type(()) or type(output) == type([]):
+                loss_list = []
+                # deep supervision
+                for k in range(len(output)):
+                    out = output[k]
+                    loss_list.append(criterion.forward(torch.sigmoid(out), target, epoch))
+                loss = sum(loss_list)
+                # maximum voting
+                output = torch.max(torch.max(torch.max(output[0],output[1]),output[2]),output[3])
+            else:
+                loss = criterion.forward(torch.sigmoid(output), target, epoch)
+
+            
+            accu = accuracy(output.data, target)
+            losses.update(loss.data, bs)
+            top1.update(accu, bs)
+
+            # measure elapsed time
+            batch_time.update(time.time() - end)
+            end = time.time()
+
+            if i % args.print_freq == 0:
+                validating_data_writer.writerow({'epoch' : epoch, 'Val_loss':losses.val.cpu().numpy(),'Val_acc': top1.val})
+                print('Test: [{0}/{1}]\t'
+                    'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                    'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
+                    'Accu {top1.val:.3f} ({top1.avg:.3f})'.format(
+                        i, len(val_loader), batch_time=batch_time, loss=losses,
+                        top1=top1))
 
     print(' * Accu {top1.avg:.3f}'.format(top1=top1))
     return top1.avg
@@ -263,6 +306,13 @@ def test(val_loader, model, attr_num, description):
     recall = 0.0
     tol = 0
 
+    # get some random validation images
+    dataiter = iter(val_loader)
+    images, _ = dataiter.next()
+
+    writer.add_graph(model, images)
+    writer.close()
+
     for it in range(attr_num):
         pos_cnt.append(0)
         pos_tol.append(0)
@@ -270,21 +320,24 @@ def test(val_loader, model, attr_num, description):
         neg_tol.append(0)
 
     for i, _ in enumerate(val_loader):
-        input, target = _
+        input, target = _  # input = [_, 3, 243, 258] target = [_,35]
         target = target.cuda(non_blocking=True)
         input = input.cuda(non_blocking=True)
         output = model(input)
         bs = target.size(0)
 
         # maximum voting
+        # output = [4, _, 35]
         if type(output) == type(()) or type(output) == type([]):
             output = torch.max(torch.max(torch.max(output[0],output[1]),output[2]),output[3])
 
 
         batch_size = target.size(0)
         tol = tol + batch_size
+        #output = (_, 35)
         output = torch.sigmoid(output.data).cpu().numpy()
         output = np.where(output > 0.5, 1, 0)
+        #target = [_,35]
         target = target.cpu().numpy()
 
         for it in range(attr_num):
@@ -322,6 +375,7 @@ def test(val_loader, model, attr_num, description):
     print('\t     Attr              \tp_true/n_true\tp_tol/n_tol\tp_pred/n_pred\tcur_mA')
     mA = 0.0
     for it in range(attr_num):
+        logging.info('Value of pos_tol: {} and value of neg_tol: {}'.format(pos_tol[it], neg_tol[it]))
         cur_mA = ((1.0*pos_cnt[it]/pos_tol[it]) + (1.0*neg_cnt[it]/neg_tol[it])) / 2.0
         mA = mA + cur_mA
         print('\t#{:2}: {:18}\t{:4}\{:4}\t{:4}\{:4}\t{:4}\{:4}\t{:.5f}'.format(it,description[it],pos_cnt[it],neg_cnt[it],pos_tol[it],neg_tol[it],(pos_cnt[it]+neg_tol[it]-neg_cnt[it]),(neg_cnt[it]+pos_tol[it]-pos_cnt[it]),cur_mA))
@@ -342,30 +396,18 @@ def test(val_loader, model, attr_num, description):
 def test_and_generate_attributes_file(val_loader, model, attr_num, description,image_path):
     '''
     Input: 
-    val_loader: loader of validation data in batches
+    val_loader: loader of validation data
     Model: model to test
     attr_num: Number of attributes of each image
-    descrition: 
+    description: Attribute names 
     Output:
-    csv file with name + attribute inferences
-    '''
-  
-    #list_annotations = []
-    #annotations = []
-    model.eval()
-    num_incorrect_pred = 0
-    num_correct_pred = 0
-    
-    #Get dataframe from attributes.py
-    
-    #logging.info('Labels: {}'.format(description)) 
-
-
-
-    #df_name_attributes = pd.DataFrame( columns = headers)
-    
+    out.csv -> csv file with name + attribute inferences
    
-    
+    '''
+    model.eval()
+    count = 0
+    num_correct_pred = 0
+    gender_attribute=16
     
     for i, _ in enumerate(val_loader):
         input, target = _
@@ -380,23 +422,24 @@ def test_and_generate_attributes_file(val_loader, model, attr_num, description,i
 
 
         batch_size = target.size(0)
-        #tol = tol + batch_size
         output = torch.sigmoid(output.data).cpu().numpy()
         output = np.where(output > 0.5, 1, 0)
         target = target.cpu().numpy()
-        #logging.info('Lote Index: {}'.format(i)) 
         
         ##Generate the list Annotations for all images: [attributes]
-
-
         for jt in range(batch_size):
-            row = [image_path[jt]] + list(map(str,output[jt][:]))
+            logging.debug('Inferences: {}'.format((output[jt][gender_attribute]))) 
+            row = [image_path[count]] + list(map(str,output[jt][:]))
+            logging.info('Values in row: {}'.format(row))
+            df_attributes.loc[count] = row
+            count +=1
 
-            df_attributes.loc[jt] = row
-        
-        df_attributes.to_csv('out.csv',index=False)
+            if output[jt][gender_attribute] == target[jt][gender_attribute]:
+                num_correct_pred+=1
+    
+    df_attributes.to_csv('out.csv',index=False)
             
-                
+    return num_correct_pred        
             
 
 def save_checkpoint(state, epoch, prefix, filename='.pth.tar'):
@@ -546,6 +589,42 @@ class Weighted_BCELoss(object):
                                         0.023446,
                                         0.128917]).cuda()
         elif experiment == 'peta':
+            self.weights = torch.Tensor([0.3033,
+                                         0.4417,
+                                         0.1783,
+                                         0.0667,
+                                         0.0667,
+                                         0.2633,
+                                         0.895, 
+                                         0.9183, 
+                                         0.0967, 
+                                         0.0733, 
+                                         0.04, 
+                                         0.1783, 
+                                         0.2433, 
+                                         0.16, 
+                                         0.03, 
+                                         0.34, 
+                                         0.575, 
+                                         0.0667, 
+                                         0.0017, 
+                                         0.9167, 
+                                         0.6317, 
+                                         0.0233, 
+                                         0.045, 
+                                         0.0083, 
+                                         0.6117, 
+                                         0.0017, 
+                                         0.2233, 
+                                         0.025, 
+                                         0.1383, 
+                                         0.0183, 
+                                         0.0283, 
+                                         0.6333, 
+                                         0.1683, 
+                                         0.345,
+                                         0.0367]).cuda()
+        elif experiment == 'gender':
             self.weights = torch.Tensor([0.5016,
                                         0.3275,
                                         0.1023,
@@ -581,10 +660,12 @@ class Weighted_BCELoss(object):
                                         0.0838,
                                         0.4605,
                                         0.0124]).cuda()
-        #self.weights = None
+        else:
+            self.weights = None
 
     def forward(self, output, target, epoch):
         if self.weights is not None:
+            
             cur_weights = torch.exp(target + (1 - target * 2) * self.weights)
             loss = cur_weights *  (target * torch.log(output + EPS)) + ((1 - target) * torch.log(1 - output + EPS))
         else:

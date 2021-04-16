@@ -7,8 +7,12 @@ import torch.utils.data as data
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import logging
-# Level of warnings
-#logging.basicConfig(format='[%(levelname)s]: %(message)s', level=logging.INFO) 
+import imgaug
+import imgaug.augmenters as iaa
+
+
+
+
 
 def default_loader(path):
     return Image.open(path).convert('RGB')
@@ -19,17 +23,18 @@ class MultiLabelDataset(data.Dataset):
     '''
     def __init__(self, root, label, transform = None, loader = default_loader):
         images = []
-    
+        # labels = open(label).read()
         labels = open(label).readlines()
-        for line in labels:
+        for idx, line in enumerate(labels):
             items = line.split()
             img_name = items.pop(0)
-            logging.info('img_name on MultiLabelDataset init: {}'.format(img_name)) 
+            logging.info('img_name on MultiLabelDataset init: {}, and line: {}'.format(img_name, idx)) 
             if os.path.isfile(os.path.join(root, img_name)):
                 cur_label = tuple([int(v) for v in items])
                 images.append((img_name, cur_label))
             else:
                 print(os.path.join(root, img_name) + 'Not Found.')
+            
         self.root = root
         self.images = images
         self.transform = transform
@@ -171,8 +176,16 @@ description['rap'] = ['Female',
 
 class MultiLabelDatasetOnlyForTest(MultiLabelDataset):
     '''
-    Load a multi label data.
-    input: dataset of images and its labels
+    Attributes:
+    root -> Images root path
+    images -> Image name + attributes
+    transform -> Transformation defined in class Get_Dataset
+    loader -> Loader defined in Main
+    images_path -> Relative to root images path
+
+    Methods:
+
+    get_Images_path -> Output: Return the relative to root images path
     '''
     def __init__(self, root, label, transform = None, loader = default_loader, images_path = None):
         images = []
@@ -221,8 +234,8 @@ def Get_Dataset(experiment, approach, data_path, train_list_path, val_list_path,
     transform_train = transforms.Compose([
         transforms.Resize(size=(256, 128)),
         transforms.RandomHorizontalFlip(),
-        # transforms.ColorJitter(hue=.05, saturation=.05),
-        # transforms.RandomRotation(20, resample=Image.BILINEAR),
+        transforms.ColorJitter(hue=.05, saturation=.05, brightness=0.1, contrast=0.2),
+        transforms.RandomRotation(20, resample=Image.BILINEAR),
         transforms.ToTensor(),
         normalize
         ])
@@ -250,7 +263,11 @@ def Get_Dataset(experiment, approach, data_path, train_list_path, val_list_path,
         val_dataset = MultiLabelDataset(root=data_path,
                     label=val_list_path, transform=transform_test)
         return train_dataset, val_dataset, attr_nums['peta'], description['peta']
+
     elif experiment == 'gender':
+        '''
+        Branch only for Gender experiment. This branch will be followed with the run_test.sh configuration. 
+        '''
         if generate_file:
             val_dataset = MultiLabelDatasetOnlyForTest(root=data_path,
                         label=val_list_path, transform=transform_test)
@@ -259,6 +276,7 @@ def Get_Dataset(experiment, approach, data_path, train_list_path, val_list_path,
             data = MultiLabelDatasetOnlyForTest(root=data_path,
                         label=val_list_path, transform=transform_train)
             images_path = data.get_Images_Path()
+
             return train_dataset, val_dataset, attr_nums['peta'], description['peta'],images_path
 
         else:
