@@ -40,10 +40,12 @@ Perform a retrain with:
 - save frequency equals 10
 
 ## Update: Test
-- Generate annotations file for data with /utils/generate_Annotations.py
-- Update newdatasets.py with the annotation file path
-- Upload the model on model/ and rename it as bn_inception-52deb4733.pth
-- To run
+Perform a inference with:
+- Model located in CHECKPOINT_PATH
+- Images root data path as DATA_PATH
+- Validation annotations located in VAL_ANNOTATIONS
+Output:
+- Inference_result.csv: Inference annotations for all images in VAL_ANNOTATIONS
 
 ## Pretrained Models
 
