@@ -22,7 +22,7 @@ The original datasets should be processed to match the DataLoader.
 
 We provide the label lists for training and testing.
 
-## Training and Testing 
+## Training, Testing, and Visualization 
 
 ```
 sh run_train.sh
@@ -30,6 +30,9 @@ sh run_train.sh
 
 ```
 sh run_test.sh
+```
+```
+Execute utils/inferences_visualization.ipynb cells
 ```
 ## Update: Train
 Perform a retrain with:
@@ -46,6 +49,14 @@ Perform an inference with:
 - Validation annotations located in VAL_ANNOTATIONS<br />
 Output:
 - Inference_result.csv: Inference annotations for all images in VAL_ANNOTATIONS
+
+## Update: Visualization
+Display inference results from Test:
+- input csv in csv_path
+- Fixed number of images to 145
+Output:
+- 145 images with their inferences result and path as title.
+
 
 ## Pretrained Models
 
