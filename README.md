@@ -1,10 +1,7 @@
-# Improving Pedestrian Attribute Recognition With Weakly-Supervised Multi-Scale Attribute-Specific Localization
+# Improving Pedestrian Attribute Recognition With Weakly-Supervised Multi-Scale Attribute-Specific Localization for Real Time Inference
 
-Code for the paper "Improving Pedestrian Attribute Recognition With Weakly-Supervised Multi-Scale Attribute-Specific Localization", ICCV 2019, Seoul.
-
-[[Paper]](https://arxiv.org/abs/1910.04562) [[Poster]](https://chufengt.github.io/publication/pedestrian-attribute/iccv_poster_id2029.pdf)
-
-Contact: chufeng.t@foxmail.com or tcf18@mails.tsinghua.edu.cn
+Based on the original work of (Tang et al., 2019)
+[[Paper]](https://arxiv.org/abs/1910.04562)
 
 ## Environment
 
@@ -53,7 +50,7 @@ Output:
 ## Update: Visualization
 Display inference results from Test:
 - input csv in csv_path
-- Fixed number of images to 145
+- Fixed number of images to 145<br />
 Output:
 - 145 images with their inferences result and path as title.
 
