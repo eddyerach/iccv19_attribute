@@ -65,16 +65,4 @@ We provide the pretrained models for reference, the results may slightly differe
 | RAP     | 81.86 | [Model](https://drive.google.com/file/d/15paMK0-rKDsuzptDPK5kH2JuL8QO0HyS/view?usp=sharing) |
 | PA-100K | 80.45 | [Model](https://drive.google.com/file/d/1xIw3jpvE1pDC3U464kcFJ58iSKCRNQ63/view?usp=sharing) |
 
-## Reference
 
-If this work is useful to your research, please cite:
-
-```
-@inproceedings{tang2019improving,
-  title={Improving Pedestrian Attribute Recognition With Weakly-Supervised Multi-Scale Attribute-Specific Localization},
-  author={Tang, Chufeng and Sheng, Lu and Zhang, Zhaoxiang and Hu, Xiaolin},
-  booktitle={Proceedings of the IEEE International Conference on Computer Vision},
-  pages={4997--5006},
-  year={2019}
-}
-```
