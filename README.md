@@ -49,7 +49,7 @@ Output:
 
 ## Update: Visualization
 Display inference results from Test:
-- input csv in csv_path
+- input csv in csv_path.
 - Fixed number of images to 145<br />
 Output:
 - 145 images with their inferences result and path as title.
