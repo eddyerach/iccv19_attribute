@@ -63,7 +63,7 @@ def make_metrics(csv_path, json_path, model_name):
     
     df_ground_truth = pd.DataFrame(columns = ['image_name', 'ground_truth_class_name'])
     json_path = 'annotations.json'
-    cod = int(0)
+    #cod = int(0)
     with open(json_path) as json_file:
             data = json.load(json_file)
             for key,value in data['annotations'].items():
@@ -77,13 +77,14 @@ def make_metrics(csv_path, json_path, model_name):
 
     #df_ground_truth_clean['image_name'] = df_inference_clean['image_name'].apply(lambda x: os.path.split(x)[1] )
     df_ground_truth_general = (df_ground_truth_clean.copy(deep=True))
-    df_ground_truth_female = ((df_ground_truth_clean[df_ground_truth_clean['ground_truth_class_name'] == 0]).reset_index(drop=True)).copy(deep=True)
-    df_ground_truth_male = ((df_ground_truth_clean[df_ground_truth_clean['ground_truth_class_name'] == 1]).reset_index(drop=True)).copy(deep=True)
+    #df_ground_truth_female = ((df_ground_truth_clean[df_ground_truth_clean['ground_truth_class_name'] == 0]).reset_index(drop=True)).copy(deep=True)
+    #df_ground_truth_male = ((df_ground_truth_clean[df_ground_truth_clean['ground_truth_class_name'] == 1]).reset_index(drop=True)).copy(deep=True)
 
     ##Create main results csv
-
-    df_inference_general.to_csv('inference_general.csv',index=False)
-    df_ground_truth_general.to_csv('ground_truth_general.csv', index=False)
+    inference_general_name = model_name + '_inference_general.csv'
+    df_inference_general.to_csv(inference_general_name,index=False)
+    ground_truth_general_name = model_name + '_ground_truth_general.csv'
+    df_ground_truth_general.to_csv(ground_truth_general_name, index=False)
 
     ##Make an inner join with infered and ground truth tables. For general, female, male.
     df_general_comparison = (pd.merge(df_inference_general, df_ground_truth_general,how='inner', on='image_name')).reset_index(drop=True)
@@ -93,12 +94,15 @@ def make_metrics(csv_path, json_path, model_name):
     df_general_comparison['correct_inference'] = (df_general_comparison['class_name'] == df_general_comparison['ground_truth_class_name'])
     df_female_comparison['correct_inference'] = (df_female_comparison['class_name'] == df_female_comparison['ground_truth_class_name'])
     df_male_comparison['correct_inference'] = (df_male_comparison['class_name'] == df_male_comparison['ground_truth_class_name'])
+    general_comparison_name = model_name + '_general_comparison.csv'
+    female_comparison_name = model_name + '_female_comparison.csv'
+    male_comparison_name = model_name + '_male_comparison.csv'
     #Write comparison dataframes to csv files. For general, female, male
-    df_general_comparison.to_csv('general_comparison.csv',index=False)
-    df_female_comparison.to_csv('female_comparison.csv',index=False)
-    df_male_comparison.to_csv('male_comparison.csv',index=False)
-
-    file2 = open('report.txt','w+')
+    df_general_comparison.to_csv(general_comparison_name,index=False)
+    df_female_comparison.to_csv(female_comparison_name,index=False)
+    df_male_comparison.to_csv(male_comparison_name,index=False)
+    reportname = model_name + '_report.txt'
+    file2 = open(reportname,'w+')
     report = []
     report.append('                              Model Report                            \n')
     report.append('______________________________________________________________________\n')
